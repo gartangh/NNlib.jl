@@ -8,6 +8,6 @@ import NNlib: conv_direct, conv_im2col
     NNlib.is_nnpack_available() && push!(impl, NNlib.conv_nnpack)
 
     for T in impl
-        @test T(x, w, DenseConvDims(x, w)) isa AbstractArray{K,4} where K
+        @test T(x, w, ConvDims(x, w)) isa AbstractArray{K,4} where K
     end
 end
