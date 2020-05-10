@@ -59,8 +59,8 @@ function conv_direct!(y::AbstractArray{yT,5}, x::AbstractArray{xT,5},
     out_width, out_height, out_depth = output_size(cdims)
 
     # Create a method that, at compile-time, determines how we're going to index into `w`
-    kproj(k, M, cdims::ConvDims{N,S,P,D,true}) where {N, S, P, D} = k
-    kproj(k, M, cdims::ConvDims{N,S,P,D,false}) where {N, S, P, D} = M - k + 1
+    kproj(k, M, cdims::ConvDims{N,K,C_in,C_out,S,P,D,true,G}) where {N,K,C_in,C_out,S,P,D,G} = k
+    kproj(k, M, cdims::ConvDims{N,K,C_in,C_out,S,P,D,false,G}) where {N,K,C_in,C_out,S,P,D,G} = M - k + 1
 
     # A helper function to project from output (w, h) to input (input_w, input_h)
     project(idx, stride, pad) = (idx - 1)*stride - pad + 1
