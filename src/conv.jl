@@ -26,44 +26,44 @@ export conv, conv!, ∇conv_data, ∇conv_data!, ∇conv_filter, ∇conv_filter!
 #       cdims = ConvDims(x, w; stride=2, dilation=(3,2))
 #       dx = ∇conv_data(conv(x, w, cdims), w, cdims)
 
-#   The computational flow, starting from the user facing functions, 
-#   goes through the following steps:  
+#   The computational flow, starting from the user facing functions,
+#   goes through the following steps:
 #
-#   STEP 1: 
+#   STEP 1:
 #       use ConvDims objects (only for `conv` and `depthwiseconv`)
-#   STEP 2: 
+#   STEP 2:
 #        define autoallocating version (frontend and implementations)
-#   STEP 3: 
+#   STEP 3:
 #        reshape to 3d convolutions (frontend and implementions)
-#   STEP 4: 
+#   STEP 4:
 #        choose implementation
 
 # TODO: should we also add
-#   STEP X: 
+#   STEP X:
 #        use homogeneus datatypes
 # to handle etherogeneus inputs now handled by conv_direct?
 
 
 ########## STEP 1 ############
 """
-    conv(x, w; stride=1, pad=0, dilation=1, flipped=false)
+    conv(x, w; stride=1, pad=0, dilation=1, flipped=false, groupcount=1)
 
-Apply convolution filter `w` to input `x`. `x` and `w` are 3d/4d/5d tensors 
-in 1d/2d/3d convolutions respectively. 
+Apply convolution filter `w` to input `x`. `x` and `w` are 3d/4d/5d tensors
+in 1d/2d/3d convolutions respectively.
 """
-function conv(x, w::AbstractArray{T, N}; stride=1, pad=0, dilation=1, flipped=false) where {T, N}
+function conv(x, w::AbstractArray{T, N}; stride=1, pad=0, dilation=1, flipped=false, groupcount=1) where {T, N}
     stride = expand(Val(N-2), stride)
     pad = expand(Val(N-2), pad)
     dilation = expand(Val(N-2), dilation)
-    cdims = DenseConvDims(x, w; stride=stride, padding=pad, dilation=dilation, flipkernel=flipped)
+    cdims = DenseConvDims(x, w; stride=stride, padding=pad, dilation=dilation, flipkernel=flipped, groupcount=groupcount)
     return conv(x, w, cdims)
 end
 
 """
     depthwiseconv(x, w; stride=1, pad=0, dilation=1, flipped=false)
 
-Depthwise convolution operation with filter `w` on input `x`. `x` and `w` 
-are 3d/4d/5d tensors in 1d/2d/3d convolutions respectively. 
+Depthwise convolution operation with filter `w` on input `x`. `x` and `w`
+are 3d/4d/5d tensors in 1d/2d/3d convolutions respectively.
 """
 function depthwiseconv(x, w::AbstractArray{T, N}; stride=1, pad=0, dilation=1, flipped=false) where {T, N}
     stride = expand(Val(N-2), stride)
@@ -99,7 +99,7 @@ for backend in (Symbol(), :_direct, :_im2col, :_nnpack)
                             dy::AbstractArray{yT,N}, w::AbstractArray{wT,N},
                             cdims::ConvDims; kwargs...) where {yT, wT, N}
                 dx = similar(dy, input_size(cdims)..., channels_in(cdims),
-                                                        size(dy, N))
+                                                       size(dy, N))
                 return $(Symbol("$(name)$(backend)!"))(dx, dy, w, cdims; kwargs...)
             end
         end
@@ -111,7 +111,7 @@ for backend in (Symbol(), :_direct, :_im2col, :_nnpack)
         function $(Symbol("∇conv_filter$(backend)"))(
                         x::AbstractArray{xT,N}, dy::AbstractArray{yT,N},
                         cdims::ConvDims; kwargs...) where {xT, yT, N}
-            dw = similar(dy, kernel_size(cdims)..., channels_in(cdims),
+            dw = similar(dy, kernel_size(cdims)..., div(channels_in(cdims),group_count(cdims)),
                                                     channels_out(cdims))
             return $(Symbol("∇conv_filter$(backend)!"))(dw, x, dy, cdims; kwargs...)
         end
